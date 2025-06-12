@@ -1,7 +1,7 @@
 # ProyectoConsultasSQL
 
 
-![Logo](/Users/danielamichellod/Desktop/ProyectoConsultasSQL/DataProject_SQL_Diagram.jpeg)
+![SQL Diagram](DataProject_SQL_Diagram.jpeg)
 
 
 
