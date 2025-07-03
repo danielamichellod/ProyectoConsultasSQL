@@ -12,12 +12,13 @@ FROM actor AS a
 WHERE a."actor_id" BETWEEN 30 AND 40;
 
 -- 4. Obtén las películas cuyo idioma coincide con el idioma original.
--- La consulta nos devuelve columnas vacías por el hecho de que todos los datos en la columna "original_language_id" aparecen como "NULL".
+-- correccion aportada
 SELECT f."title" AS "películas",
 	   f."original_language_id" AS "idioma_original",
 	   f."language_id" AS "idioma"
 FROM film AS f 
-WHERE f."language_id" = "original_language_id";
+WHERE f."language_id" = f."original_language_id"
+OR f."original_language_id" IS NULL;
 
 -- 5. Ordena las películas por duración de forma ascendente.
 SELECT f."title" AS "película",
@@ -26,10 +27,11 @@ FROM film AS f
 ORDER BY f."length" ASC;
 
 -- 6. Encuentra el nombre y apellido de los actores que tengan ‘Allen’ en su apellido. 
+-- correccion aportada
 SELECT a."first_name" AS "nombre",
 	   a."last_name" AS "apellido"
 FROM actor AS a 
-WHERE a."last_name" LIKE '%ALLEN%'; 
+WHERE a."last_name" ILIKE '%allen%'; 
 
 -- 7. Encuentra la cantidad total de películas en cada clasificación de la tabla "film" y muestra la clasificación junto con el recuento. 
 SELECT f."rating" AS "clasificación", 
@@ -54,11 +56,14 @@ SELECT MIN("length") AS "menor duración",
 FROM film AS f;
 
 -- 11. Encuentra lo que costó el antepenúltimo alquiler ordenado por día.
+-- correccion aportada
 SELECT f."title" AS "película",
-	   f."rental_duration" AS "duración alquiler",
+	   r."rental_date" AS "fecha alquiler",
 	   f."rental_rate" AS "coste alquiler"
-FROM film AS f 
-ORDER BY f."rental_duration" ASC -- para esta consulta, la ordenación por día también podría ser de forma descendente. He decidido seguir adelante con una ordenación ascendente, pero en función de los datos que le interesan al cliente podemos cambiar la consulta.
+FROM rental AS r
+JOIN inventory AS i ON r."inventory_id" = i."inventory_id"
+JOIN film AS f ON i."film_id" = f."film_id"
+ORDER BY r."rental_date" ASC -- para esta consulta, la ordenación por día también podría ser de forma descendente. He decidido seguir adelante con una ordenación ascendente, pero en función de los datos que le interesan al cliente podemos cambiar la consulta.
 OFFSET 997 -- he usado una alternativa más simple al saber cuántas películas hay en total, he podido restarle el número correspondiente para llegar al antepenúltimo alquiler.  
 LIMIT 1;
 
@@ -93,13 +98,14 @@ ORDER BY c."customer_id" DESC
 LIMIT 10;
 
 -- 17. Encuentra el nombre y apellido de los actores que aparecen en la película con título ‘Egg Igby’.
+-- correccion aportada
 SELECT a."first_name" AS "nombre",
 	   a."last_name" AS "apellido",
 	   f."title" AS "película"
 FROM actor AS a 
 JOIN film_actor AS fa ON fa.actor_id = a.actor_id -- para realizar esta consulta, es necesario hacer un JOIN entre las tablas "film","film_actor" y "actor".
 JOIN film AS f ON f.film_id = fa.film_id
-WHERE f."title" = 'EGG IGBY';
+WHERE f."title" ILIKE 'egg igby';
 
 -- 18. Selecciona todos los nombres de las películas únicos.
 SELECT DISTINCT f."title" AS "película"
@@ -152,11 +158,12 @@ WHERE f."length" > (
        );
 
 -- 25. Averigua el número de alquileres registrados por mes.
+-- correccion aportada
 SELECT "mes de alquiler",
-	   COUNT("resumen alquileres") AS "número de alquileres" -- en la consulta principal, contamos el resumen de alquileres.
+	   COUNT(*) AS "número de alquileres" -- en la consulta principal, contamos el resumen de alquileres.
 FROM (
        SELECT r."rental_id" AS "alquiler id", -- la subconsulta nos ayuda a determinar todos los alquileres registrados por mes.
-	   TO_CHAR(r."rental_date", 'YYYY-MM') AS "mes de alquiler" -- TO_CHAR nos ayuda a convertir la fecha de alquiler a formato AÑO-MES.
+	          TO_CHAR(r."rental_date", 'YYYY-MM') AS "mes de alquiler" -- TO_CHAR nos ayuda a convertir la fecha de alquiler a formato AÑO-MES.
        FROM rental AS r 
        INNER JOIN inventory AS i ON i.inventory_id = r.inventory_id -- para realizar esta consulta, es necesario hacer un JOIN entre las tablas "film","inventory_id" y "rental_id".
        INNER JOIN film AS f ON f.film_id = i.film_id
@@ -192,10 +199,11 @@ HAVING COUNT(fa."film_id") > 40 -- filtramos con HAVING para obtener solo los qu
 ORDER BY "número de películas" ASC;
 
 -- 29. Obtener todas las películas y, si están disponibles en el inventario, mostrar la cantidad disponible.
+-- correccion aportada
 SELECT f."title" AS "películas",
        COUNT(i."inventory_id") AS "cantidad disponible" -- contamos cuántas copias hay en el inventario de cada película.
 FROM film AS f 
-INNER JOIN inventory AS i ON i.film_id = f.film_id -- usamos el INNER JOIN porque nos va a devolver solo películas que tienen al menos una copia en el inventory. 
+LEFT JOIN inventory AS i ON i.film_id = f.film_id -- usamos el INNER JOIN porque nos va a devolver solo películas que tienen al menos una copia en el inventory. 
 GROUP BY f."title"
 ORDER BY "cantidad disponible" ASC;
 
@@ -251,10 +259,11 @@ ORDER BY "total gastado" DESC -- ordenamos de forma descendente para que aparezc
 LIMIT 5; -- nos devuelve solo los 5 clientes que más han gastado.
 
 -- 35. Selecciona todos los actores cuyo primer nombre es ' Johnny'.
+-- correccion aportada
 SELECT a."first_name" AS "nombre",
        a."last_name" AS "apellido"
 FROM actor AS a 
-WHERE a."first_name" = 'JOHNNY'
+WHERE a."first_name" ILIKE  'johnny'
 ORDER BY apellido;
 
 -- 36. Renombra la columna “first_name” como Nombre y “last_name” como Apellido.
@@ -411,6 +420,7 @@ FROM "peliculas alquiladas" AS pa
 ORDER BY "total alquileres" DESC;
 
 -- 53. Encuentra el título de las películas que han sido alquiladas por el cliente con el nombre ‘Tammy Sanders’ y que aún no se han devuelto. Ordena los resultados alfabéticamente por título de película.
+-- correccion aportada
 SELECT DISTINCT f."title" AS "películas", -- evita títulos duplicados si alquiló la misma película más de una vez sin devolverla.
                 CONCAT(c."first_name", ' ', c."last_name") AS "nombre",
                 r."return_date" AS "fecha de devolución"
@@ -418,8 +428,8 @@ FROM customer AS c
 INNER JOIN rental AS r ON r.customer_id = c.customer_id
 INNER JOIN inventory AS i ON r.inventory_id = i.inventory_id
 INNER JOIN film AS f ON i.film_id = f.film_id -- los JOINs conectan el cliente con el alquiler, el inventario y las películas.
-WHERE c."first_name" = 'TAMMY'
-  AND c."last_name" = 'SANDERS' -- selecciona al cliente específico.
+WHERE c."first_name" ILIKE  'tammy'
+  AND c."last_name" ILIKE 'sanders' -- selecciona al cliente específico.
   AND r."return_date" IS NULL -- filtra los alquileres no devueltos.
 ORDER BY f."title";
 
